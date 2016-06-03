@@ -1,0 +1,1 @@
+/export/ldb/zhangsong5/tools/kudu/src/CMakeFiles/kudu-manager.dir
