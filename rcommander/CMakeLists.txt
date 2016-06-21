@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.3)
+PROJECT(rcommander)
+AUX_SOURCE_DIRECTORY(src DIR_SRCS)
+set(EXECUTABLE_OUTPUT_PATH ./bin)
+ADD_EXECUTABLE(rcommander  src/commandor.cc src/commandor.h src/rcommander.cc)
+SET(CMAKE_CXX_FLAGS "--std=c++11 -lstdc++")
+ADD_EXECUTABLE(commandor-test src/commandor-test.cc src/commandor.h src/commandor.cc)

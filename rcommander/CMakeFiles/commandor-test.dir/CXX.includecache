@@ -1,0 +1,24 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/brucesz/git/tools/rcommander/src/commandor-test.cc
+commandor.h
+/Users/brucesz/git/tools/rcommander/src/commandor.h
+
+/Users/brucesz/git/tools/rcommander/src/commandor.cc
+commandor.h
+/Users/brucesz/git/tools/rcommander/src/commandor.h
+stdlib.h
+-
+
+/Users/brucesz/git/tools/rcommander/src/commandor.h
+string
+-
+memory
+-
+
