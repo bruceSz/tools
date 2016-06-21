@@ -1,2 +1,0 @@
-/Users/brucesz/git/tools/rcommander/CMakeFiles/commandor-test.dir
-/Users/brucesz/git/tools/rcommander/CMakeFiles/rcommander.dir

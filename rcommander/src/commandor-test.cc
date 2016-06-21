@@ -19,5 +19,6 @@
 
 int main() {
     COMMAND::Commandor* comm = COMMAND::Commandor::getInstance();
+    comm->execute("ls -l");
 }
 

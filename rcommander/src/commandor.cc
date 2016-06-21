@@ -21,14 +21,11 @@
 
 namespace COMMAND{
 
-Commandor* Commandor::getInstance(){
-    static Commandor  comm;
-    return &comm;
-}
 
-string execute(const string& cmd) {
+string Commandor::execute(const string& cmd) {
     system(cmd.c_str());
     return "nn"; 
 }
+
 
 }

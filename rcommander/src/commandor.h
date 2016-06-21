@@ -32,9 +32,12 @@ namespace COMMAND {
     class Commandor
     {
         private:
-            Commandor();
+            Commandor(){};
         public:
-            static Commandor*  getInstance();
+            static Commandor* getInstance(){
+                static Commandor comm;
+                return &comm;
+            }
             string execute(const string& cmd);
     };
 }
