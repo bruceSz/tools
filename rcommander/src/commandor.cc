@@ -17,15 +17,29 @@
 /* vim: set ts=4 sw=4 sts=4 tw=100 */
 
 #include "commandor.h"
-#include <stdlib.h>
+#include <stdexcept>
+#include <stdio.h>
 
 namespace COMMAND{
 
 
 string Commandor::execute(const string& cmd) {
-    system(cmd.c_str());
-    return "nn"; 
+    char buffer[128];
+    string ret = "";
+    FILE* pipe = popen(cmd.c_str(),"r");
+    if (!pipe) 
+        throw std::runtime_error("popen() failed");
+    try {
+        while(!feof(pipe)){
+            if(fgets(buffer, 128, pipe) != NULL)
+                ret += buffer;
+        }
+    } catch ( ... ) {
+        pclose(pipe);
+        throw;
+    }
+    pclose(pipe);
+    return ret;
 }
-
 
 }

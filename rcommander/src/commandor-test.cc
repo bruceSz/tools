@@ -16,9 +16,13 @@
 
 /* vim: set ts=4 sw=4 sts=4 tw=100 */
 #include "commandor.h"
+#include <iostream>
+
+using namespace std;
 
 int main() {
     COMMAND::Commandor* comm = COMMAND::Commandor::getInstance();
-    comm->execute("ls -l");
+    string ret = comm->execute("ls xxx ");
+    cout << ret ;
 }
 
