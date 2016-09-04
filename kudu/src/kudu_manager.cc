@@ -6,9 +6,6 @@
 #include <memory>
 
 #include <stdlib.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <unistd.h>
 #include <ctime>
 
 #include "kudu/client/client.h"
@@ -17,6 +14,8 @@
 #include "kudu/util/slice.h"
 
 #include "gflags/gflags.h"
+
+#include "util.h"
 
 using namespace kudu::client;
 using std::string;
@@ -31,13 +30,6 @@ using kudu::Slice;
 using kudu::Status;
 using std::unique_ptr;
 
-#define KUDU_EXIT_NOT_OK(s, msg) do {\
-    ::kudu::Status _s = (s);\
-    if (PREDICT_FALSE(!_s.ok())) {\
-      std::cout << msg << endl;\
-      exit(1);\
-    };\
-  } while(0);
 
 
 DEFINE_int32(kudu_session_timeout, 60000,
@@ -78,22 +70,6 @@ void listTable(std::string master_addr){
   }
 }
 
-string getLocalIp(){
-  char name[100];
-  gethostname(name, 100);
-  hostent * ht = gethostbyname(name);
-  if (ht == NULL){
-    cerr << "can't get host by name: " << name << endl;
-    exit(1);
-  }
-  struct in_addr ** addr_list = (struct in_addr**) ht->h_addr_list;
-  for (int i=0; addr_list[i] != NULL; i++){
-    string ip(inet_ntoa(*addr_list[i]));
-    if (ip.find("172")==0){
-      return ip;
-    }
-  }
-}
 
 string getSampleLog(){
   string full_log_name = getLocalIp() + FLAGS_kudu_sample_log_name_suffix;
@@ -131,33 +107,7 @@ unique_ptr<KuduInsert> BuildInsertRow(shared_ptr<KuduTable> table, const string&
 } 
 
 
-std::tr1::shared_ptr<kudu::client::KuduClient> create_client(std::string master_addr) {
-  std::tr1::shared_ptr<kudu::client::KuduClient> client;
-  {
-    Status s = KuduClientBuilder().add_master_server_addr(master_addr).Build(&client);
-    if (! s.ok()) {
-      cerr << "cannot connect to master" << endl;
-      exit(1);
-    }
-  }
-  return client;
 
-}
-
-shared_ptr<KuduTable> openTable(shared_ptr<kudu::client::KuduClient> client, 
-                                std::string tab_name) {
-  
-  shared_ptr<KuduTable> table;
-  {
-    Status s = client->OpenTable(tab_name, &table);
-    if (!s.ok()) {
-      cerr << "Open table error " 
-          << s.ToString() << endl;
-      exit(1);
-    }
-  }
-  return table;
-}
 
 
 void doCollectLog(std::string master_addr ) {
@@ -181,10 +131,9 @@ void doCollectLog(std::string master_addr ) {
     cerr << "apply insert into kudu table failed."
         << sample_log << endl;
     exit(1);
-
   }
-
 }
+
 void printTabSchemaInfo(std::string master_addr, std::string table_name) {
     auto client = create_client(master_addr);
     KuduPartitionSchema kps;
@@ -203,8 +152,7 @@ void dispatch_command(int argc, char** argv){
   }
   std::string command = argv[1];
   std::cout << "Master addr: " << FLAGS_master_addresses << std::endl;
-  if (command == "list_tables") {
-	listTable(FLAGS_master_addresses);
+  if (command == "list_tables") { listTable(FLAGS_master_addresses);
   } else if (command == "log_collect") {
 	doCollectLog(FLAGS_master_addresses);
   } else if (command == "test_insert") {

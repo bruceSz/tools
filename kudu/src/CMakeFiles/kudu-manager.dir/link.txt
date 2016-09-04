@@ -1,1 +1,0 @@
-/usr/local/gcc-4.9.3/bin/g++   -std=c++11   CMakeFiles/kudu-manager.dir/kudu_manager.cc.o  -o ../bin/kudu-manager 

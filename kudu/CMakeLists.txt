@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.4.2)
 PROJECT(kudu)
 subdirs(src)
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -ggdb")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 link_directories(/export/ldb/kudu_build/kudu-gitlab/thirdparty/installed-deps/lib64)
 link_directories(/usr/local/lib64)
