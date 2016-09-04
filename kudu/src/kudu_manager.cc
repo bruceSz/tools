@@ -56,7 +56,6 @@ void Usage(char** argv){
 }
 
 void listTable(std::string master_addr){
-
   std::tr1::shared_ptr<kudu::client::KuduClient> client;
   KuduClientBuilder().add_master_server_addr(master_addr).Build(&client);
   std::vector<KuduTabletServer*> tablet_servers;
@@ -69,7 +68,6 @@ void listTable(std::string master_addr){
     std::cout << "uuid: " << t_servers -> uuid() << std::endl;
   }
 }
-
 
 string getSampleLog(){
   string full_log_name = getLocalIp() + FLAGS_kudu_sample_log_name_suffix;
@@ -85,6 +83,7 @@ string getSampleLog(){
   return ss.str();
 
 }
+
 string getTimeVal(){
   auto t = time(nullptr);
   auto* tm = std::localtime(&t);
@@ -105,10 +104,6 @@ unique_ptr<KuduInsert> BuildInsertRow(shared_ptr<KuduTable> table, const string&
   row->SetStringCopy(2, Slice(log_content));
   return insert;
 } 
-
-
-
-
 
 void doCollectLog(std::string master_addr ) {
   string sample_log_content = getSampleLog(); 
@@ -140,8 +135,6 @@ void printTabSchemaInfo(std::string master_addr, std::string table_name) {
     client->GetTablePartitionSchema(table_name, &kps);
     std::cout << kps.PartitionSchemaDebugString() << std::endl;
     //KUDU_EXIT_NOT_OK(client->GetTablePartitionSchema(table_name, &schema), "get table schema error");
-    
-
 }
 
 

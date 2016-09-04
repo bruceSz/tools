@@ -13,6 +13,7 @@
 #include <boost/tokenizer.hpp>
 
 #include "util.h"
+#include "text_file.h"
 
 
 using namespace std;
@@ -42,152 +43,7 @@ void Usage(string prog_name) {
     exit(1);
 }
 
-struct FileReadException: std::exception {
-    const char* what() const noexcept {return "Error getline against ifstream ";}
-};
-class TextFileIterator;
-class TextFile {
-  public:
-    TextFile():num_line_read_(0),file_name_(),infile_(file_name_) {}      
-    TextFile(std::string fname):num_line_read_(0),
-            file_name_(std::move(fname)),infile_(file_name_) {}
-    virtual ~TextFile() = default;
 
-
-    Status GetNext(vector<string>* vals) ; 
-    
-    TextFile(const TextFile&) = delete;
-    TextFile& operator=(const TextFile& ) = delete;
-    virtual TextFileIterator begin() = 0;
-    virtual TextFileIterator end() = 0;
-
-  protected:
-    // parse given line and do string manipulation 
-    virtual Status parse(string line,vector<string>* vals) const = 0;
-
-  private:
-    size_t num_line_read_ ;
-    std::string file_name_;
-    std::ifstream infile_;
-};
-
-/*
- * Limitation:
- *  This iterator is only used for TextFile , one time a iterator.
- *  two iterator exist same time will affect each other.
- *  Also caller is in charge of existence of tf_.
- *
- * */
-class TextFileIterator {
-    TextFile* tf_;
-    vector<string> vals;
-    bool is_valid;
-    void read();
-  public:
-    typedef input_iterator_tag iterator_category;
-    typedef vector<string> value_type;
-    typedef ptrdiff_t difference_type;
-    typedef const vector<string>* pointer;
-    typedef const vector<string>& reference;
-    
-    reference operator*() {
-        return vals;
-    }
-    pointer operator->() {
-        return &vals;
-    }
-    TextFileIterator():tf_(nullptr),is_valid(false),vals({}){}
-    TextFileIterator(TextFile* t_file):tf_(t_file) {
-        read();
-    }
-    TextFileIterator operator++() {
-        read();
-        return *this;
-    }
-    TextFileIterator operator++(int) {
-        TextFileIterator tmp = *this;
-        read();
-        return tmp;
-    }
-    bool operator==(const TextFileIterator& rhs) {
-        if (tf_ ==  rhs.tf_ && vals == rhs.vals && is_valid == rhs.is_valid)
-            return true;
-        if (is_valid == false && rhs.is_valid == false)
-            return true;
-        return false;
-    }
-    bool operator!=(const TextFileIterator& rhs) {
-        return !(*this==rhs);
-    }
-};
-
-void TextFileIterator::read() {
-    Status s = tf_->GetNext(&vals);
-    if (s.ok()) {
-        is_valid = true;
-    } else if (s.IsEndOfFile()) {
-        is_valid = false;
-        vector<string> tmp;
-        tf_ = nullptr;
-        vals.swap(tmp);
-    } else {
-        throw FileReadException();
-    }
-}
-
-
-Status TextFile::GetNext(vector<string>* vals) {
-    string line;
-    if (std::getline(infile_, line)) {
-        RETURN_NOT_OK(parse(line, vals));
-        return Status::OK();
-    } else {
-        return Status::EndOfFile("get end of the file");
-    }
-}
-
-class RawFile: public TextFile {
-  public :
-    RawFile(std::string fname):TextFile(fname) {}
-    virtual Status parse(string line, vector<string>* vals) const override {
-        vals->clear();
-        vals->push_back(line);
-        return Status::OK();
-    }
-    virtual TextFileIterator begin()  override {
-        return  TextFileIterator(this);
-    }
-    virtual TextFileIterator end() override {
-        return TextFileIterator();
-    }
-    
-};
-
-class CSVFile: public TextFile {
-  public :
-    CSVFile(std::string fname):TextFile(fname) {}
-    virtual Status parse(string line, vector<string>* vals) const override {
-        vals->clear();
-        RETURN_NOT_OK(do_parse(line, vals));
-        return Status::OK();
-    }
-    virtual TextFileIterator begin() override {
-        return  TextFileIterator(this);
-    }
-    virtual TextFileIterator end() override {
-        return TextFileIterator();
-    }
-  private:
-    typedef boost::tokenizer<boost::char_separator<char>> Tokenizer;
-    Status do_parse(string line, vector<string>* vals) const {
-        vector<string> vec;
-        boost::char_separator<char> sep{","};
-        Tokenizer tok{line, sep};
-        vec.assign(tok.begin(), tok.end());
-        vals->swap(vec);
-        return Status::OK();
-    }
-};
 
 class CSVLoader {
   public:
@@ -197,11 +53,12 @@ class CSVLoader {
     CSVLoader(const CSVLoader&) = delete;
     CSVLoader& operator=(const CSVLoader& ) = delete;
   private:
+    Status doInsert(KuduPartialRow* row, KuduSchema* schema, int idx, string val);
     CSVFile csv_file_;
     string master_addr_;
 };
 
-Status doInsert(KuduPartialRow* row, KuduSchema* schema, int idx, string val) {
+Status CSVLoader::doInsert() {
     KuduColumnSchema c_schema = schema->Column(idx);
     switch (c_schema.type()) {
         case KuduColumnSchema::INT32:
@@ -265,11 +122,4 @@ int main(int argc, char** argv) {
     CSVLoader f(FLAGS_master_addresses, csv_file);
     KUDU_EXIT_NOT_OK(f.load(table_name), "error load csv file into kudu table");
 
-    /*for(TextFileIterator it = f.begin();it != f.end(); it++) {
-        auto ret = *it;
-        for (auto c : ret) {
-             cout << c << ":";
-        }
-        cout << endl;
-    }*/
 }

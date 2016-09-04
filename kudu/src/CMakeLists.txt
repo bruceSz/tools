@@ -7,6 +7,7 @@ ${COMMON_SRC}
 
 SET(csv_loader_src
 csv_loader.cc
+text_file.cc
 ${COMMON_SRC}
 )
 add_executable(kudu-manager ${kudu_manager_src})
