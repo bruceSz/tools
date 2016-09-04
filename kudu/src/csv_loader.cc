@@ -1,16 +1,11 @@
 #include <iostream>
 #include <string>
-#include <stdlib.h>
-#include <fstream>
-
-
-#include "kudu/client/client.h"
-#include "kudu/common/partial_row.h"
-#include "kudu/util/status.h"
 
 #include "gflags/gflags.h"
 
-#include <boost/tokenizer.hpp>
+#include "kudu/common/partial_row.h"
+#include "kudu/util/status.h"
+
 
 #include "util.h"
 #include "text_file.h"
@@ -24,10 +19,6 @@ using kudu::client::KuduInsert;
 using kudu::client::KuduColumnSchema;
 using kudu::client::KuduSession;
 
-#define RETURN_NOT_OK(s) do {\
-    Status _s = (s);\
-    if (!_s.ok()) return _s;\
-    } while (0);\
     
 
 DEFINE_int32(kudu_session_timeout, 60000,
@@ -58,7 +49,7 @@ class CSVLoader {
     string master_addr_;
 };
 
-Status CSVLoader::doInsert() {
+Status CSVLoader::doInsert(KuduPartialRow* row, KuduSchema* schema, int idx, string val) {
     KuduColumnSchema c_schema = schema->Column(idx);
     switch (c_schema.type()) {
         case KuduColumnSchema::INT32:
