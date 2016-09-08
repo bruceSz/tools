@@ -8,6 +8,7 @@ ${COMMON_SRC}
 SET(csv_loader_src
 csv_loader.cc
 text_file.cc
+queue.cc
 ${COMMON_SRC}
 )
 

@@ -20,6 +20,7 @@ class BlockQueue {
   	BlockQueue():q_size_(1),curr_num_(0),closed_(false) {}
   	kudu::Status Get(ValType* val);
   	kudu::Status Put(ValType val);
+    bool IsEmpty() {return curr_num_==0;};
   	void Close();
 
   	BlockQueue(const BlockQueue& other) = delete;
