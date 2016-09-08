@@ -3,18 +3,17 @@
 
 class Sem {
   public:
-	~Sem(int val = 0):val_(val),concurrent_producer_(val_) {}
+	Sem(int val = 1):val_(val) {}
 	
 	Sem(const Sem& other) = delete;
 	Sem& operator=(const Sem& ) = delete;
-	// consume , may wait
+	// increase , release 
 	void Sp();
-	// produce/release
+	// decrease , acquire
 	void Sv();
 
   private:
   	int val_;
-  	int concurrent_producer_;
   	std::mutex mtx_;
   	std::condition_variable cv_;
 };

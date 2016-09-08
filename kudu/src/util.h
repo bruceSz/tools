@@ -6,10 +6,17 @@
 #define KUDU_EXIT_NOT_OK(s, msg) do {\
     ::kudu::Status _s = (s);\
     if (PREDICT_FALSE(!_s.ok())) {\
-      std::cout << msg << endl;\
+      std::cout << msg << "::" << _s.ToString()  << endl;\
       exit(1);\
     };\
   } while(0);
+
+#define JD_LOG_OUTPUT_NOT_OK(s,msg) do {\
+    ::kudu::Status _s = (s);\
+    if (PREDICT_FALSE(!_s.ok())) {\
+      std::cout << msg << "::" <<  _s.ToString()  << endl;\
+    };\
+    } while(0);
 
 std::string getLocalIp();
 std::tr1::shared_ptr<kudu::client::KuduClient> create_client(std::string master_addr);

@@ -93,11 +93,13 @@ Status CSVLoader::load(string table_name) {
         unique_ptr<KuduInsert> insert(table->NewInsert());
         KuduPartialRow * row = insert->mutable_row();
         for (int i = 0; i< col_vals.size(); i++) {
-            doInsert(row, &schema, i, col_vals[i]);
+            std::cout << "deal with:" << col_vals[i] << std::endl;
+            KUDU_EXIT_NOT_OK(doInsert(row, &schema, i, col_vals[i]), "error when set add column");
         }
-        KUDU_RETURN_NOT_OK(session->Apply(insert.release()));
+        KuduInsert *tmp = insert.get();
+        JD_LOG_OUTPUT_NOT_OK(session->Apply(insert.release()),"Error appling:"+tmp->ToString());
     }
-    KUDU_RETURN_NOT_OK(session->Flush());
+    JD_LOG_OUTPUT_NOT_OK(session->Flush(),"error when flush");
     return Status::OK();
 }
 
