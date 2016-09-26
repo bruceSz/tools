@@ -51,7 +51,9 @@ void Usage(char** argv){
   std::cout << "\t\t" << "list_tables" << std::endl;
   std::cout << "\t\t" << "collect_log" << std::endl; 
   std::cout << "\t\t" << "test_insert: insert test into 172.22.191.41" << std::endl; 
-  std::cout << "\t\t" << "print_tab_info" << std::endl;
+  std::cout << "\t\t" << "print_tab_info [tab_name]" << std::endl;
+  std::cout << "\t\t" << "rename_table [tab_name new_tab_name]" << std::endl;
+
   exit(1);
 }
 
@@ -137,6 +139,14 @@ void printTabSchemaInfo(std::string master_addr, std::string table_name) {
     //KUDU_EXIT_NOT_OK(client->GetTablePartitionSchema(table_name, &schema), "get table schema error");
 }
 
+void renameTable(std::string master_addr, const std::string& tab_name, const std::string& new_tab_name) {
+    auto client = create_client(master_addr);
+    auto table_alter = client->NewTableAlterer(tab_name);
+    table_alter->RenameTo(new_tab_name);
+    KUDU_EXIT_NOT_OK(table_alter->Alter(),"alter table name failed");
+    
+}
+
 
 void dispatch_command(int argc, char** argv){
   //TODO:
@@ -145,13 +155,20 @@ void dispatch_command(int argc, char** argv){
   }
   std::string command = argv[1];
   std::cout << "Master addr: " << FLAGS_master_addresses << std::endl;
-  if (command == "list_tables") { listTable(FLAGS_master_addresses);
+  if (command == "list_tables") {
+     listTable(FLAGS_master_addresses);
   } else if (command == "log_collect") {
-	doCollectLog(FLAGS_master_addresses);
+    std::cout << "This action is deprecated." << std::endl;
+    exit(1);
+	//doCollectLog(FLAGS_master_addresses);
   } else if (command == "test_insert") {
     //doCollectLog("172.22.191.41:7051");
-    doCollectLog(FLAGS_master_addresses);
+    std::cout << "This action is deprecated." << std::endl;
+    exit(1);
+    //doCollectLog(FLAGS_master_addresses);
   } else if (command == "test_scan") {
+    std::cout << "This action is deprecated." << std::endl;
+    exit(1);
 
   } else if (command == "print_tab_info") {
     if (argc < 3) {
@@ -159,6 +176,14 @@ void dispatch_command(int argc, char** argv){
     }
     std::string table_name = argv[2];
     printTabSchemaInfo(FLAGS_master_addresses, table_name);
+  } else if (command == "rename_table") {
+    if (argc < 4) {
+        Usage(argv);
+    }
+    std::string table_name = argv[2];
+    std::string new_table_name = argv[3];
+    renameTable(FLAGS_master_addresses, table_name, new_table_name);
+    
   } else {
     std::cout << "unknown action." << std::endl; 
     Usage(argv);
