@@ -1,20 +1,19 @@
-#include "sem.h"
 #include <thread>
-// p means produce and increase internal val, maybe wait here
+
+#include "sem.h"
+
+// this is typically a binary sem
 void Sem::Sp() {
-	std::unique_lock <std::mutex> l(mtx_);
-	while(val_ >= concurrent_producer_)
-		cv_.wait(l);
-	val_++;
+    std::unique_lock<std::mutex> l(mtx_);
+    if ( val_ <= 0)
+        val_++;
+    cv_.notify_one();
 }
 
-// v means produce and increase internal val, should not wait.
 void Sem::Sv() {
-	std::unique_lock<std::mutex> l(mtx_);
-	// TODO: maybe don't need a while here, just make max to 1.
-	/*while(!val <1)
-		cv_.wait(l);*/
-	// below implementation is specified for usage of BlockQueue
-	if (val_ > 0)
-		val_--;
+	std::unique_lock <std::mutex> l(mtx_);
+    // actually, there is no way we get in to the val_ < 0 situation
+	while(val_ <= 0)
+		cv_.wait(l);
+	val_--;
 }
