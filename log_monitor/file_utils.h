@@ -64,8 +64,8 @@ public:
 class TextFile {
 public:
     TextFile(const std::string& file_name):file_name_(file_name) {}
-    void Init();
-    kudu::Status GetNextLine(string* str);
+    kudu::Status Init();
+    kudu::Status GetNextLine(std::string* str);
     TextFileIncrementalIterator begin()  {
         return  TextFileIncrementalIterator(this);
     }

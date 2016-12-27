@@ -25,3 +25,4 @@ link_directories(/usr/local/lib64/)
 target_link_libraries(monitor kudu_client)
 
 add_executable(file_utils-test file_utils-test.cc file_utils.cc)
+target_link_libraries(file_utils-test kudu_client)

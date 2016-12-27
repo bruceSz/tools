@@ -6,15 +6,19 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <unistd.h>
+#include <fstream>
 #include "file_utils.h"
 
 using std::string;
 using std::cout;
 using std::endl;
+using std::ios;
+using kudu::Status;
 namespace log {
 namespace monitor {
 
-void TextFile::Init() {
+Status TextFile::Init() {
     ifs_.open(file_name_, ios::in);
     if (!ifs_) {
         return Status::IOError("Error open file:" + file_name_);
@@ -36,7 +40,7 @@ void TextFile::ResetFileIndicator() {
     ifs_.seekg(seek_, ios::beg);
 }
 
-void TextFileIcrementalIterator::next_line() {
+void TextFileIncrementalIterator::next_line() {
 	 
 	Status s = tf_->GetNextLine(&row);
 	while (s.IsEndOfFile()) {
