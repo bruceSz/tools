@@ -23,3 +23,5 @@ set(MONITOR_SRC monitor.cc)
 add_executable(monitor ${MONITOR_SRC})
 link_directories(/usr/local/lib64/)
 target_link_libraries(monitor kudu_client)
+
+add_executable(file_utils-test file_utils-test.cc file_utils.cc)

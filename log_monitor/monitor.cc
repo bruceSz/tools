@@ -113,6 +113,24 @@ void split(const string& s, char delim, vector<string>& ret) {
     return;
 }
 
+class TextFile {
+public:
+    TextFile(const string& file_name):file_name_(file_name) {}
+    void Init();
+private:
+    string file_name_;
+    ifstream ifs_;
+}
+
+void TextFile::Init() {
+    ifs_.open(file_name_, ios::in);
+    if (!ifs) {
+        cout<<"open erro"<<endl;
+        return ;
+    }
+}
+
+
 void tailf(const string& file_name, const string& pattern, char split_symbol, int32_t field_num) {
     std::tr1::shared_ptr<KuduClient> client;
     std::tr1::shared_ptr<KuduTable> table;
