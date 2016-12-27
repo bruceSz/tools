@@ -1,0 +1,38 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/export/ldb/zhangsong5/tools/log_monitor/monitor.cc
+iostream
+-
+fstream
+-
+sstream
+-
+string
+-
+unistd.h
+-
+ctime
+-
+memory
+-
+vector
+-
+kudu/client/client.h
+-
+kudu/common/partial_row.h
+/export/ldb/zhangsong5/tools/log_monitor/kudu/common/partial_row.h
+kudu/util/status.h
+-
+netdb.h
+-
+arpa/inet.h
+-
+iomanip
+-
+
