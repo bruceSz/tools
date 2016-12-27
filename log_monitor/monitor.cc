@@ -32,7 +32,7 @@ using kudu::Status;
 using std::tr1::shared_ptr;
 using std::unique_ptr;
 
-bool DEBUG=false;
+bool DEBUG=true;
 
 string MASTER_ADDR = "172.22.191.42:7051";
 string TAB_NAME = "impala::test.his_impala_sql_fragments";
@@ -126,7 +126,7 @@ void tailf(const string& file_name, const string& pattern, char split_symbol, in
     //cout << table->partition_schema().DebugString()<< endl;
     session = client->NewSession();
     session->SetTimeoutMillis(60000);
-    session->SetFlushMode(KuduSession::AUTO_FLUSH_BACKGROUND);
+    session->SetFlushMode(KuduSession::AUTO_FLUSH_SYNC);
     
 
     ifstream ifs;
@@ -135,6 +135,7 @@ void tailf(const string& file_name, const string& pattern, char split_symbol, in
         cout<<"open erro"<<endl;
         return ;
     }
+    string local_host = getLocalAddr();
     string row;
     size_t seek;
     uint32_t idx=0;
@@ -159,10 +160,12 @@ void tailf(const string& file_name, const string& pattern, char split_symbol, in
                 if (field_num >0 && field_num <=tokens.size()){
                     unique_ptr<KuduInsert> insert(table->NewInsert());
                     KuduPartialRow * row = insert->mutable_row();
-                    row->SetStringCopy("host", getLocalAddr());
-                    row->SetStringCopy("time", getTimeStr());
-                    row->SetStringCopy("sql_str", tokens[field_num-1]);
-                    session->Apply(insert.get());
+                    row->SetStringCopy("host", local_host);
+                    string curr_time = getTimeStr();
+                    row->SetStringCopy("time", curr_time);
+                    string sql_str = tokens[field_num-1];
+                    row->SetStringCopy("sql_str", sql_str);
+                    session->Apply(insert.release());
 
 
                 } else {
