@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 2.8)
+project(misc)
+AUX_SOURCE_DIRECTORY(src)
+INCLUDE_DIRECTORIES(../thirdparty/gflags-2.1.2/include/)
+set(EXECUTABLE_OUTPUT_PATH ./bin)
+ADD_EXECUTABLE(union src/union.cc)
