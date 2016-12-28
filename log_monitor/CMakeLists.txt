@@ -26,3 +26,6 @@ target_link_libraries(monitor kudu_client)
 
 add_executable(file_utils-test file_utils-test.cc file_utils.cc)
 target_link_libraries(file_utils-test kudu_client)
+
+add_executable(log_monitor  log_monitor.cc common.cc)
+target_link_libraries(file_utils-test kudu_client)
