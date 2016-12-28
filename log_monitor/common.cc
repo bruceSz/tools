@@ -3,12 +3,23 @@
  * Date: 2016/12/26
  *
  * */
+
+#include <iostream>
+#include <sstream>
+#include <iomanip>
 #include "common.h"
 
 using kudu::Status;
 using std::string;
+using std::cout;
+using std::endl;
+using std::setfill;
+using std::setw;
+using std::vector;
 using kudu::client::KuduClient;
+using kudu::client::KuduClientBuilder;
 using kudu::client::KuduTable;
+using std::stringstream;
 
 
 Status create_kudu_client(string& master_addr, std::tr1::shared_ptr<KuduClient>* client) {

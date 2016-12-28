@@ -9,8 +9,10 @@
 #define LOG_MONITOR_COMMON_H_
 
 #include <string>
+#include <memory>
 #include <vector>
 #include <kudu/util/status.h>
+#include <kudu/client/client.h>
 
 kudu::Status create_kudu_client(std::string& master_addr, std::tr1::shared_ptr<kudu::client::KuduClient>* client);
 

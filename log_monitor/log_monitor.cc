@@ -6,22 +6,29 @@
  */
 
 #include <iostream>
+#include "kudu/common/partial_row.h"
 #include "file_utils.h"
 #include "common.h"
 
 using namespace std;
 using namespace log::monitor;
+using kudu::client::KuduClient;
+using kudu::client::KuduTable;
+using kudu::client::KuduSession;
+using kudu::client::KuduSchema;
+using kudu::client::KuduInsert;
+using kudu::KuduPartialRow;
 
 string MASTER_ADDR = "172.22.191.42:7051";
 string TAB_NAME = "impala::test.his_impala_sql_fragments";
 
 
-bool extract_target_field(string& row, string& pattern, char split_symbol, int32_t field_num, string* field_val) {
+bool extract_target_field(string& row, const string& pattern, char split_symbol, int32_t field_num, string* field_val) {
     std::size_t found = row.find(pattern);
         if (found != std::string::npos) {
             vector<string> tokens;
             split(row, split_symbol, tokens);
-                if (field_nu<0 || field_num>=tokens.size())
+                if (field_num<0 || field_num>=tokens.size())
                     return false;
                 else {
                     *field_val = tokens[field_num];
@@ -43,7 +50,7 @@ void record_cache_sql(const string& file_name, const string& pattern, char split
     session = client->NewSession();
     session->SetTimeoutMillis(60000);
     session->SetFlushMode(KuduSession::AUTO_FLUSH_SYNC);
-
+    string local_host = getLocalAddr();
     string row;
     string field_val;
     TextFile tf(file_name);
@@ -66,7 +73,7 @@ void record_cache_sql(const string& file_name, const string& pattern, char split
         row->SetStringCopy("host", local_host);
         string curr_time = getTimeStr();
         row->SetStringCopy("time", curr_time);
-        string sql_str = tokens[field_num-1];
+        string sql_str = field_val;
         row->SetStringCopy("sql_str", sql_str);
         session->Apply(insert.release());
 
