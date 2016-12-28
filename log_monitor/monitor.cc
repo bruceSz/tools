@@ -32,7 +32,7 @@ using kudu::Status;
 using std::tr1::shared_ptr;
 using std::unique_ptr;
 
-bool DEBUG=true;
+bool DEBUG=false;
 
 string MASTER_ADDR = "172.22.191.42:7051";
 string TAB_NAME = "impala::test.his_impala_sql_fragments";

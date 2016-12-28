@@ -21,11 +21,17 @@ using kudu::KuduPartialRow;
 
 string MASTER_ADDR = "172.22.191.42:7051";
 string TAB_NAME = "impala::test.his_impala_sql_fragments";
+bool DEBUG=false;
 
 
 bool extract_target_field(string& row, const string& pattern, char split_symbol, int32_t field_num, string* field_val) {
     std::size_t found = row.find(pattern);
         if (found != std::string::npos) {
+
+            cout << row << endl;
+            cout << pattern << endl;
+            cout << split_symbol << endl;
+            cout << field_num << endl;
             vector<string> tokens;
             split(row, split_symbol, tokens);
                 if (field_num<0 || field_num>=tokens.size())
@@ -58,7 +64,35 @@ void record_cache_sql(const string& file_name, const string& pattern, char split
     TextFileIncrementalIterator iter = tf.begin();
     while (iter != tf.end()) {
         row = *iter;
-        if (!extract_target_field(row, pattern, split_symbol, field_num, &field_val)) {
+        std::size_t found = row.find(pattern);
+        if (found != std::string::npos) {
+            vector<string> tokens;
+            split(row, split_symbol, tokens);
+            if (DEBUG) {
+                if (field_num==0 || field_num>tokens.size())
+                    cout << row << endl;
+                else {
+                    cout<<tokens[field_num-1]<<endl;
+                }
+                    
+            } else {
+                if (field_num >0 && field_num <=tokens.size()){
+                    unique_ptr<KuduInsert> insert(table->NewInsert());
+                    KuduPartialRow * row = insert->mutable_row();
+                    row->SetStringCopy("host", local_host);
+                    string curr_time = getTimeStr();
+                    row->SetStringCopy("time", curr_time);
+                    string sql_str = tokens[field_num-1];
+                    row->SetStringCopy("sql_str", sql_str);
+                    session->Apply(insert.release());
+
+
+                } else {
+                    cout << row << endl;
+                }
+            }
+        }
+        /*if (!extract_target_field(row, pattern, split_symbol, field_num, &field_val)) {
             cout << "extract filed error: " 
                 << "row:" << row
                 << "pattern:"  << pattern
@@ -67,15 +101,16 @@ void record_cache_sql(const string& file_name, const string& pattern, char split
                 << endl;
 
             break;
-        }
-        unique_ptr<KuduInsert> insert(table->NewInsert());
+            continue;
+        }*/
+        /*unique_ptr<KuduInsert> insert(table->NewInsert());
         KuduPartialRow * row = insert->mutable_row();
         row->SetStringCopy("host", local_host);
         string curr_time = getTimeStr();
         row->SetStringCopy("time", curr_time);
         string sql_str = field_val;
         row->SetStringCopy("sql_str", sql_str);
-        session->Apply(insert.release());
+        session->Apply(insert.release());*/
 
         //cout << *iter << endl;
         iter++;
