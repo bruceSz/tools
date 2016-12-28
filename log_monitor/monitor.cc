@@ -36,6 +36,7 @@ bool DEBUG=true;
 
 string MASTER_ADDR = "172.22.191.42:7051";
 string TAB_NAME = "impala::test.his_impala_sql_fragments";
+string g_str;
 /*
  * `host` STRING,
  * `time` STRING,
@@ -81,6 +82,27 @@ string getTimeStr() {
 }
 
 
+Status GetNextLine(ifstream& ifs, string &row ) {
+    string tmp;
+    char t_c;
+    while(ifs.peek()!= EOF) {
+        ifs.get(t_c);
+        if (t_c == '\n') {
+            row.swap(g_str);
+            g_str.swap(tmp);
+            return Status::OK();
+        }
+        g_str.push_back(t_c);
+
+    }
+    //ifs.seekg(0, ios::end);
+    if (DEBUG) {
+        size_t length = ifs.tellg();
+        cout << "seek val when peek == EOF" << length << endl;
+    }
+    return Status::EndOfFile("End of File");
+}
+
 Status create_kudu_client(string& master_addr, std::tr1::shared_ptr<KuduClient>* client) {
     std::tr1::shared_ptr<KuduClient> c;
     Status s = KuduClientBuilder().add_master_server_addr(master_addr).Build(&c);
@@ -123,9 +145,7 @@ void tailf(const string& file_name, const string& pattern, char split_symbol, in
     
     create_kudu_client(MASTER_ADDR,&client);
     open_kudu_table(client, TAB_NAME, &table);
-    cout << "replica num:" << table->num_replicas() << endl;
 
-    //cout << table->partition_schema().DebugString()<< endl;
     session = client->NewSession();
     session->SetTimeoutMillis(60000);
     session->SetFlushMode(KuduSession::AUTO_FLUSH_SYNC);
@@ -139,16 +159,28 @@ void tailf(const string& file_name, const string& pattern, char split_symbol, in
     }
     string local_host = getLocalAddr();
     string row;
-    size_t seek;
+    ifs.seekg(0, ios::end);
+    size_t seek = ifs.tellg();
     uint32_t idx=0;
     do{
-        if (ifs.peek() == EOF) {
+        /*if (ifs.peek() == EOF) {
             ifs.clear();
             ifs.seekg(seek, ios::beg);
-            sleep(3);
             continue;
+        }*/
+        Status s_getline = GetNextLine(ifs, row);
+        // TODO: there maybe a gap where this prog leek some character. 
+        if (!s_getline.ok()) {
+            if (s_getline.IsEndOfFile()) {
+                ifs.clear();
+                ifs.seekg(0, ios::end);
+                //seek = ifs.tellg();
+                sleep(3);
+                continue;
+            } else {
+                break;
+            }
         }
-        getline(ifs, row);
         std::size_t found = row.find(pattern);
         if (found != std::string::npos) {
             vector<string> tokens;
@@ -156,8 +188,10 @@ void tailf(const string& file_name, const string& pattern, char split_symbol, in
             if (DEBUG) {
                 if (field_num==0 || field_num>tokens.size())
                     cout << row << endl;
-                else
+                else {
                     cout<<tokens[field_num-1]<<endl;
+                }
+                    
             } else {
                 if (field_num >0 && field_num <=tokens.size()){
                     unique_ptr<KuduInsert> insert(table->NewInsert());
@@ -177,8 +211,9 @@ void tailf(const string& file_name, const string& pattern, char split_symbol, in
         }
         seek = ifs.tellg();
             idx++;
-            if (idx>=1000)
-                break;
+            if (idx%100000==0)
+                cout << "#########################after tellg" << seek << endl;
+            //   break;
    }while(1);
    ifs.close();
    session->Flush();

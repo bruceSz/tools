@@ -21,7 +21,7 @@ class TextFileIncrementalIterator {
 	TextFile* tf_;
 	std::string row;
 	size_t timeout_;
-	size_t wait_internal_{5};
+	size_t wait_internal_{1};
 	bool get_end_;
 	void next_line();
 public:
@@ -66,6 +66,7 @@ public:
     TextFile(const std::string& file_name):file_name_(file_name) {}
     kudu::Status Init();
     kudu::Status GetNextLine(std::string* str);
+    size_t getSize();
     TextFileIncrementalIterator begin()  {
         return  TextFileIncrementalIterator(this);
     }
@@ -73,6 +74,7 @@ public:
         return TextFileIncrementalIterator();
     }
 private:
+    kudu::Status doGetNextLine(std::ifstream& ifs, std::string& row);
 	friend class TextFileIncrementalIterator;
 	void ResetFileIndicator();
 	size_t seek() const {return seek_;}
@@ -82,6 +84,7 @@ private:
     std::string file_name_;
     std::ifstream ifs_;
     size_t seek_;
+    std::string curr_row_;
 };
 
 
