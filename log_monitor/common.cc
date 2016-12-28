@@ -7,6 +7,8 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <netdb.h>
+#include <arpa/inet.h>
 #include "common.h"
 
 using kudu::Status;
@@ -20,6 +22,25 @@ using kudu::client::KuduClient;
 using kudu::client::KuduClientBuilder;
 using kudu::client::KuduTable;
 using std::stringstream;
+
+string getLocalAddr() {
+    static string ret = "";
+    char name[100];   
+    gethostname(name, 100);   
+    hostent * ht = gethostbyname(name);   
+    if (ht == NULL){     
+        std::cerr << "can't get host by name: " << name << std::endl;     
+        exit(1);  
+    }   
+    struct in_addr ** addr_list = (struct in_addr**) ht->h_addr_list;   
+    for (int i=0; addr_list[i] != NULL; i++){     
+        std::string ip(inet_ntoa(*addr_list[i]));     
+        if (ip.find("172")==0){       
+            ret = ip;     
+        }   
+    }
+    return ret;
+}
 
 
 Status create_kudu_client(string& master_addr, std::tr1::shared_ptr<KuduClient>* client) {

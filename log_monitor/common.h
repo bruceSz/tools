@@ -21,5 +21,6 @@ kudu::Status open_kudu_table(std::tr1::shared_ptr<kudu::client::KuduClient> clie
 
 void split(const std::string& s, char delim, std::vector<std::string>& ret);
 std::string getTimeStr();
+std::string getLocalAddr();
 
 #endif
