@@ -26,22 +26,18 @@ bool DEBUG=false;
 
 bool extract_target_field(string& row, const string& pattern, char split_symbol, int32_t field_num, string* field_val) {
     std::size_t found = row.find(pattern);
-        if (found != std::string::npos) {
-
-            cout << row << endl;
-            cout << pattern << endl;
-            cout << split_symbol << endl;
-            cout << field_num << endl;
-            vector<string> tokens;
-            split(row, split_symbol, tokens);
-                if (field_num<0 || field_num>=tokens.size())
-                    return false;
-                else {
-                    *field_val = tokens[field_num];
-                    return true;
-                }
-        }
-        return false;
+    if (found != std::string::npos) {
+        //cout << row << endl;
+        vector<string> tokens;
+        split(row, split_symbol, tokens);
+            if (field_num<0 || field_num>=tokens.size())
+                return false;
+            else {
+                *field_val = tokens[field_num];
+                return true;
+            }
+    }
+    return false;
 }
 
 void record_cache_sql(const string& file_name, const string& pattern, char split_symbol, int32_t field_num) {
@@ -61,10 +57,11 @@ void record_cache_sql(const string& file_name, const string& pattern, char split
     string field_val;
     TextFile tf(file_name);
     tf.Init();
+    int idx = 0;
     TextFileIncrementalIterator iter = tf.begin();
     while (iter != tf.end()) {
         row = *iter;
-        std::size_t found = row.find(pattern);
+        /*std::size_t found = row.find(pattern);
         if (found != std::string::npos) {
             vector<string> tokens;
             split(row, split_symbol, tokens);
@@ -91,18 +88,25 @@ void record_cache_sql(const string& file_name, const string& pattern, char split
                     cout << row << endl;
                 }
             }
-        }
-        /*if (!extract_target_field(row, pattern, split_symbol, field_num, &field_val)) {
-            cout << "extract filed error: " 
-                << "row:" << row
-                << "pattern:"  << pattern
-                << "split_symbol" << split_symbol
-                << "field_num" << field_num
-                << endl;
-
-            break;
-            continue;
         }*/
+        if (!extract_target_field(row, pattern, split_symbol, field_num, &field_val)) {
+            //continue;
+        } else {
+            if (DEBUG) {
+                cout << "field val: " << field_val << endl;
+            } else {
+                unique_ptr<KuduInsert> insert(table->NewInsert());
+                KuduPartialRow * row = insert->mutable_row();
+                row->SetStringCopy("host", local_host);
+                string curr_time = getTimeStr();
+                row->SetStringCopy("time", curr_time);
+                string sql_str = field_val;
+                row->SetStringCopy("sql_str", sql_str);
+                session->Apply(insert.release());
+            }
+            idx++;
+            
+        }
         /*unique_ptr<KuduInsert> insert(table->NewInsert());
         KuduPartialRow * row = insert->mutable_row();
         row->SetStringCopy("host", local_host);
