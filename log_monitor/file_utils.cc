@@ -23,6 +23,8 @@ Status TextFile::Init() {
     if (!ifs_) {
         return Status::IOError("Error open file:" + file_name_);
     }
+    ifs_.seekg (0, ifs_.end);
+    seek_ = ifs_.tellg();
     return Status::OK();
 }
 
