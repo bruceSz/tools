@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <unistd.h>
 #include <iomanip>
 #include <netdb.h>
 #include <arpa/inet.h>
