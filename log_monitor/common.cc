@@ -66,7 +66,7 @@ string getTimeStr() {
         <<  " "
         << setfill('0') << setw(2) << now->tm_hour
         << ":"
-        << setfill('0') << setw(2) << (now->tm_min-20)
+        << setfill('0') << setw(2) << (now->tm_min)
         << ":"
         << setfill('0') << setw(2) << (now->tm_sec);
     return ss.str() ;
