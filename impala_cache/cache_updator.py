@@ -176,6 +176,7 @@ def run_in_background(sql_info, type_meta):
     template_sql = sql_info["sql"]
     redis_cols = sql_info["redis_structure"]
     redis_tab_name = "redis_" + md5_computer(redis_cols)
+    init = True
     rtm = RedisTableManager()
 
     n_conds = []
@@ -224,13 +225,18 @@ def run_in_background(sql_info, type_meta):
             curr_sql = curr_sql.replace(cond["template_name"], cond["actual_parameter"].send(index))
         index += jump_gap
         cache_sql_md5 = md5_computer(curr_sql)
-        new_tab = redis_tab_name+"_new"
+        if not init:
+            new_tab = redis_tab_name + "_new"
+        else:
+            new_tab = redis_tab_name
         rtm.createRedisTable(redis_cols, new_tab, cache_sql_md5)
         rtm.ingest_data_into_redis(new_tab, curr_sql)
         new_tab_s = rtm.get_redis_tab_size(new_tab)
+
         if new_tab_s != 0:
-            rtm.exchange_table_name(new_tab, redis_tab_name)
-            rtm.delete_redis_tab(new_tab)
+            if not init:
+                rtm.exchange_table_name(new_tab, redis_tab_name)
+                rtm.delete_redis_tab(new_tab)
 
         time.sleep(1)
 
@@ -255,7 +261,7 @@ def main():
         type_meta = json_o["timestamp_type_meta"]
         for idx in range(len(sqls)):
             sql_info = sqls[idx]
-            if idx == 3:
+            if idx == 2:
                 threads.append(threading.Thread(target=run_in_background, args=(sql_info, type_meta)))
 
         for th in threads:
@@ -320,5 +326,5 @@ if __name__ == "__main__":
     """
         TODO: there is a bug left: time condition coule be : time >= a and time < a
     """
-    test_RedisTable()
-    #main()
+    #test_RedisTable()
+    main()
