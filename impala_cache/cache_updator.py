@@ -7,6 +7,13 @@
 
 CONFIG_NAME="./config.json"
 REDIS_MASTER_BIN=""
+
+TEMPLATE_REDIS_CREATE_TABLE='''CREATE TABLE redis_table_name( redis_table_cols ) STORED AS TEXTFILE  TBLPROPERTIES ('__IMPALA_REDIS_LOCATION'='172.22.99.82:6380', '__IMPALA_REDIS_TABLE_METADATA_KEY'='redis_internal_table_name','__IMPALA_REDIS_CLASS'='redis_table', '__IMPALA_REDIS_API_VERSION'='V1', '__IMPALA_REDIS_INIT_STRING'='redis_md5_str')'''
+META_REDIS_TABLE="redis_internal_table_name"
+REDIS_TABLE="redis_table_name"
+REDIS_TABLE_COLS="redis_table_cols"
+REDIS_TABLE_MD5_STR="redis_md5_str"
+
 is_exit = False
 
 import json
@@ -14,6 +21,92 @@ import threading
 import time
 import signal
 import sys
+import hashlib
+import commands
+
+class RedisTableManager:
+    def __init__(self):
+        self.cmd_prefix = "sh $IMPALA_HOME/bin/impala-shell.sh   -i 172.22.99.80:21000 -q "
+        self.cmd_suffix = " --print_raw 2>/dev/null  "
+        self.sql_prefix = "\"use test; "
+        self.sql_suffix = " \""
+
+        self.redis_master_bin = "./redis-master"
+
+    def get_redis_tab_size(self, tab_name):
+        sql = "\"use test;"
+        sql += "select count(1) from "
+        sql += tab_name
+        sql += "\""
+        ret = self.exec_sql(sql).strip("[").strip("]").strip("'")
+        return int(ret)
+
+    def clear_redis_data(self, tab_name):
+        cmd = "export LD_LIBRARY_PATH=./lib64 && "
+        cmd += self.redis_master_bin 
+        cmd += " delete_table "
+        cmd += tab_name
+        cmd += " -redis_meta_server_addr 172.22.99.82 -redis_meta_server_port 6380"
+        status, output = commands.getstatusoutput(cmd)
+        if status != 0:
+            print status
+            print cmd
+            sys.exit(1)
+        print output
+        
+    def exchange_table_name(self, tab1, tab2):
+        sql = "\" use test;"
+        sql += " alter table  " 
+        sql += tab1
+        sql += " rename to "
+        sql += tab1 + "_tmp;"
+        sql += " alter table " + tab2 + " rename to " + tab1 +";"
+        sql += "alter table " + tab1 + "_tmp"+ " rename to " + tab2
+        sql += "\""
+        self.exec_sql(sql)
+
+    def delete_redis_tab(self, tab_name):
+        sql = "\" use test;"
+        sql += "drop table if exists "
+        sql += tab_name
+        sql += "\""
+        self.exec_sql(sql)
+        self.clear_redis_data(tab_name)
+
+    def ingest_data_into_redis(self, redis_table, select_sql):
+        sql = "\"use jingo_recommendation;"
+        sql += " insert into "
+        sql += "test."
+        sql += redis_table
+        sql += " "
+        sql += select_sql
+        sql += "\""
+        self.exec_sql(sql)
+
+        
+    def exec_sql(self, sql):
+        cmd = self.cmd_prefix
+        cmd += sql
+        cmd += self.cmd_suffix
+        status, output = commands.getstatusoutput(cmd)
+        if status != 0:
+            print status
+            print cmd
+            sys.exit(1)
+        return output.replace("Using existing version.info file.","").strip()
+
+    def createRedisTable(self, cols, table_name, md5_str):
+        template_sql = TEMPLATE_REDIS_CREATE_TABLE       
+        template_sql = template_sql.replace(REDIS_TABLE_COLS, cols)
+        template_sql = template_sql.replace(REDIS_TABLE, table_name)
+        template_sql = template_sql.replace(META_REDIS_TABLE, "__META__" + table_name)
+        template_sql = template_sql.replace(REDIS_TABLE_MD5_STR,md5_str)
+        sql = self.sql_prefix
+        sql += template_sql
+        sql += self.sql_suffix
+        self.exec_sql(sql)
+
+
 
 def timestamp_to_daystr(timestamp):
     timeArray = time.localtime(timestamp)
@@ -73,8 +166,18 @@ def gcd(first, second):
     return first
 
 
+def md5_computer(in_str):
+    hash_md5 = hashlib.md5(in_str)
+    
+    return hash_md5.hexdigest()
+
+
 def run_in_background(sql_info, type_meta):
     template_sql = sql_info["sql"]
+    redis_cols = sql_info["redis_structure"]
+    redis_tab_name = "redis_" + md5_computer(redis_cols)
+    rtm = RedisTableManager()
+
     n_conds = []
     if "timestamp_names" in sql_info:
         timestamp_names = sql_info["timestamp_names"]
@@ -120,8 +223,15 @@ def run_in_background(sql_info, type_meta):
         for cond in n_conds:
             curr_sql = curr_sql.replace(cond["template_name"], cond["actual_parameter"].send(index))
         index += jump_gap
-        print curr_sql
-        print 10*"#"
+        cache_sql_md5 = md5_computer(curr_sql)
+        new_tab = redis_tab_name+"_new"
+        rtm.createRedisTable(redis_cols, new_tab, cache_sql_md5)
+        rtm.ingest_data_into_redis(new_tab, curr_sql)
+        new_tab_s = rtm.get_redis_tab_size(new_tab)
+        if new_tab_s != 0:
+            rtm.exchange_table_name(new_tab, redis_tab_name)
+            rtm.delete_redis_tab(new_tab)
+
         time.sleep(1)
 
     print "end of thread"  
@@ -187,12 +297,28 @@ def test_tab_generator():
         idx +=43200
     
 
-def test():
+def test_generator():
     test_time_generator()
     test_tab_generator()
+
+def test_RedisTable():
+    rtm = RedisTableManager() 
+    cols = "id int, name string, sku_id bigint "
+    tab_name = "redis_1_for_test"
+    tab_name_2 = "redis_1_for_test_test_exchange"
+    rtm.delete_redis_tab(tab_name)
+    rtm.delete_redis_tab(tab_name_2)
+    rtm.createRedisTable(cols, tab_name, "md5:12345678")
+    #rtm.get_redis_tab_size(tab_name)
+    rtm.ingest_data_into_redis(tab_name, "values (1, 'this is a name',567788)")
+    print rtm.get_redis_tab_size(tab_name)
+    rtm.createRedisTable(cols, tab_name_2, "md5:87654321")
+    rtm.exchange_table_name(tab_name, tab_name_2)
+
 
 if __name__ == "__main__":
     """
         TODO: there is a bug left: time condition coule be : time >= a and time < a
     """
-    main()
+    test_RedisTable()
+    #main()
