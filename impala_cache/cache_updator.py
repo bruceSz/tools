@@ -8,6 +8,8 @@
 CONFIG_NAME="./config.json"
 REDIS_MASTER_BIN=""
 
+START_TIME = None
+
 TEMPLATE_REDIS_CREATE_TABLE='''CREATE TABLE redis_table_name( redis_table_cols ) STORED AS TEXTFILE  TBLPROPERTIES ('__IMPALA_REDIS_LOCATION'='172.22.99.82:6380', '__IMPALA_REDIS_TABLE_METADATA_KEY'='redis_internal_table_name','__IMPALA_REDIS_CLASS'='redis_table', '__IMPALA_REDIS_API_VERSION'='V1', '__IMPALA_REDIS_INIT_STRING'='redis_md5_str')'''
 META_REDIS_TABLE="redis_internal_table_name"
 REDIS_TABLE="redis_table_name"
@@ -16,6 +18,8 @@ REDIS_TABLE_MD5_STR="redis_md5_str"
 
 is_exit = False
 
+import logging
+import logging.handlers
 import json
 import threading
 import time
@@ -113,6 +117,7 @@ def timestamp_to_daystr(timestamp):
     daystr = time.strftime("%Y%m%d", timeArray)
     return daystr
 
+
 def daystr_to_timestamp(day_str):
     timeArray = time.strptime(day_str, "%Y%m%d")
     timestamp = int(time.mktime(timeArray))
@@ -123,6 +128,24 @@ def timestr_to_timestamp(time_str):
     timestamp = int(time.mktime(timeArray))
     return timestamp
 
+def table_to_timestamp(table_name):
+    """
+       Table has format like: gdm_log_w_20170109
+    """
+    day_str = table_name.split("_")[-1]
+    return daystr_to_timestamp(day_str)
+
+
+def curr_clock_timestamp():
+    return int(time.time())
+
+def start_timestamp():
+    global  START_TIME
+    if START_TIME is None:
+        START_TIME = int(time.time())
+
+    return START_TIME
+    
 
 def timestamp_to_timestr(timestamp):
     timeArray = time.localtime(timestamp)
@@ -137,10 +160,15 @@ def table_generator(table_meta):
     table_date = start_table_name.split("_")[-1]
     interval = table_meta["period"]
     table_date_timestamp = daystr_to_timestamp(table_date)
+    curr_time = start_timestamp()
+    num_intervals = (curr_time - table_date_timestamp)/interval
+    table_date_timestamp +=  interval * num_intervals
     while True:
         curr_clock = yield table_prefix_str + "_" + timestamp_to_daystr(table_date_timestamp)
-        if curr_clock != 0 and curr_clock % interval == 0:
-            table_date_timestamp += interval
+        num_intervals = (curr_clock - table_date_timestamp)/interval
+        table_date_timestamp +=  interval * num_intervals
+        #if curr_clock != 0 and curr_clock % interval == 0:
+        #    table_date_timestamp += interval
 
 
 
@@ -150,10 +178,14 @@ def time_generator(time_meta):
 
     # normalize timestamp in config file.
     time_val = timestr_to_timestamp(start_time)
+    curr_time = start_timestamp()
+    num_intervals = (curr_time - time_val)/interval
+    time_val += interval * num_intervals
+
     while True:
         curr_clock = yield timestamp_to_timestr(time_val)
-        if curr_clock != 0  and curr_clock % interval == 0:
-            time_val += interval
+        num_intervals = (curr_clock - time_val)/interval
+        time_val += interval * num_intervals
 
 
 def gcd(first, second):
@@ -172,7 +204,7 @@ def md5_computer(in_str):
     return hash_md5.hexdigest()
 
 
-def run_in_background(sql_info, type_meta):
+def run_in_background(logger, sql_info, type_meta):
     template_sql = sql_info["sql"]
     redis_cols = sql_info["redis_structure"]
     redis_tab_name = "redis_" + md5_computer(redis_cols)
@@ -180,6 +212,7 @@ def run_in_background(sql_info, type_meta):
     rtm = RedisTableManager()
 
     n_conds = []
+    min_time = start_timestamp()
     if "timestamp_names" in sql_info:
         timestamp_names = sql_info["timestamp_names"]
         timestamp_metas = sql_info["timestamp"] 
@@ -191,6 +224,8 @@ def run_in_background(sql_info, type_meta):
             meta_d["actual_parameter"] = time_generator(meta)
             meta_d["actual_parameter"].next()
             meta_d["init_val"] = meta["start"]
+            #if timestr_to_timestamp(meta_d["init_val"]) < min_time:
+            #    min_time = timestr_to_timestamp(meta_d["init_val"])
             n_conds.append(meta_d)
 
     if "table_names" in sql_info:
@@ -204,6 +239,9 @@ def run_in_background(sql_info, type_meta):
             meta_d["actual_parameter"] = table_generator(meta)
             meta_d["actual_parameter"].next()
             meta_d["init_val"] = meta["start"]
+            #if table_to_timestamp(meta_d["init_val"]) < min_time:
+            #    min_time = table_to_timestamp(meta_d["init_val"])
+
             n_conds.append(meta_d)
 
     jump_gap = -1
@@ -213,8 +251,9 @@ def run_in_background(sql_info, type_meta):
         else:
             jump_gap = gcd(jump_gap, cond["interval"])
 
-    index = 0
+    index = start_timestamp()#start_timestamp() - min_time
     global is_exit
+
     while True:
         # sleep for jump_gap
         if is_exit:
@@ -223,22 +262,26 @@ def run_in_background(sql_info, type_meta):
         curr_sql = template_sql
         for cond in n_conds:
             curr_sql = curr_sql.replace(cond["template_name"], cond["actual_parameter"].send(index))
-        index += jump_gap
+
         cache_sql_md5 = md5_computer(curr_sql)
         if not init:
             new_tab = redis_tab_name + "_new"
         else:
             new_tab = redis_tab_name
-        rtm.createRedisTable(redis_cols, new_tab, cache_sql_md5)
-        rtm.ingest_data_into_redis(new_tab, curr_sql)
-        new_tab_s = rtm.get_redis_tab_size(new_tab)
+            
+        logger.info(curr_sql)
+        #rtm.createRedisTable(redis_cols, new_tab, cache_sql_md5)
+        #rtm.ingest_data_into_redis(new_tab, curr_sql)
+        #new_tab_s = rtm.get_redis_tab_size(new_tab)
 
-        if new_tab_s != 0:
-            if not init:
-                rtm.exchange_table_name(new_tab, redis_tab_name)
-                rtm.delete_redis_tab(new_tab)
+        #if new_tab_s != 0:
+        #    if not init:
+        #        rtm.exchange_table_name(new_tab, redis_tab_name)
+        #        rtm.delete_redis_tab(new_tab)
 
-        time.sleep(1)
+        time.sleep(jump_gap)
+        index = curr_clock_timestamp()
+        #index += jump_gap
 
     print "end of thread"  
 
@@ -251,6 +294,7 @@ def signal_handler(signum, frame):
 def main():
     """
     """
+    logger = setup_log()
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
@@ -262,7 +306,7 @@ def main():
         for idx in range(len(sqls)):
             sql_info = sqls[idx]
             if idx == 2:
-                threads.append(threading.Thread(target=run_in_background, args=(sql_info, type_meta)))
+                threads.append(threading.Thread(target=run_in_background, args=(logger , sql_info, type_meta)))
 
         for th in threads:
             th.setDaemon(True)
@@ -321,6 +365,17 @@ def test_RedisTable():
     rtm.createRedisTable(cols, tab_name_2, "md5:87654321")
     rtm.exchange_table_name(tab_name, tab_name_2)
 
+def setup_log():
+    LOG_FILE = 'cache_updator.log'
+    handler = logging.handlers.RotatingFileHandler(LOG_FILE, maxBytes = 1024*1024*1024, backupCount=3)
+    fmt = '%(asctime)s - %(filename)s:%(lineno)s - %(name)s - %(message)s'
+    formatter = logging.Formatter(fmt)
+    handler.setFormatter(formatter)
+    logger = logging.getLogger('cache_updator')
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+    return logger
+            
 
 if __name__ == "__main__":
     """
