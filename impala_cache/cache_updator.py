@@ -84,7 +84,7 @@ class RedisTableManager:
         sql += "test."
         sql += redis_table
         sql += " "
-        sql += select_sql
+        sql += repr(select_sql)[2:-1]
         sql += "\""
         self.exec_sql(sql)
 
@@ -207,7 +207,7 @@ def md5_computer(in_str):
 
 def run_in_background(logger, sql_info, type_meta):
     template_sql = sql_info["sql"]
-    template_sql = template_sql.decode('unicode_escape').encode('unicode_escape')
+    # template_sql = template_sql.decode('unicode_escape').encode('unicode_escape')
     redis_cols = sql_info["redis_structure"]
     redis_tab_name = "redis_" + md5_computer(redis_cols)
     initialized = False
