@@ -29,11 +29,12 @@ import hashlib
 import commands
 
 class RedisTableManager:
-    def __init__(self):
+    def __init__(self, logger):
         self.cmd_prefix = "sh $IMPALA_HOME/bin/impala-shell.sh   -i 172.22.99.80:21000 -q "
         self.cmd_suffix = " --print_raw 2>/dev/null  "
         self.sql_prefix = "\"use test; "
         self.sql_suffix = " \""
+        self.logger = logger
 
         self.redis_master_bin = "./redis-master"
 
@@ -53,8 +54,8 @@ class RedisTableManager:
         cmd += " -redis_meta_server_addr 172.22.99.82 -redis_meta_server_port 6380"
         status, output = commands.getstatusoutput(cmd)
         if status != 0:
-            print status
-            print cmd
+            self.logger.warning(status)
+            self.logger.warning(cmd)
             sys.exit(1)
         print output
         
@@ -94,8 +95,8 @@ class RedisTableManager:
         cmd += self.cmd_suffix
         status, output = commands.getstatusoutput(cmd)
         if status != 0:
-            print status
-            print cmd
+            self.logger.warning(status)
+            self.logger.warning(cmd)
             sys.exit(1)
         return output.replace("Using existing version.info file.","").strip()
 
@@ -206,10 +207,12 @@ def md5_computer(in_str):
 
 def run_in_background(logger, sql_info, type_meta):
     template_sql = sql_info["sql"]
+    template_sql = template_sql.decode('unicode_escape').encode('unicode_escape')
     redis_cols = sql_info["redis_structure"]
     redis_tab_name = "redis_" + md5_computer(redis_cols)
-    init = True
-    rtm = RedisTableManager()
+    initialized = False
+    rtm = RedisTableManager(logger)
+    rtm.delete_redis_tab(redis_tab_name)
 
     n_conds = []
     min_time = start_timestamp()
@@ -264,21 +267,25 @@ def run_in_background(logger, sql_info, type_meta):
             curr_sql = curr_sql.replace(cond["template_name"], cond["actual_parameter"].send(index))
 
         cache_sql_md5 = md5_computer(curr_sql)
-        if not init:
+        if initialized:
             new_tab = redis_tab_name + "_new"
         else:
             new_tab = redis_tab_name
             
         logger.info(curr_sql)
-        #rtm.createRedisTable(redis_cols, new_tab, cache_sql_md5)
-        #rtm.ingest_data_into_redis(new_tab, curr_sql)
-        #new_tab_s = rtm.get_redis_tab_size(new_tab)
+        rtm.createRedisTable(redis_cols, new_tab, cache_sql_md5)
+        rtm.ingest_data_into_redis(new_tab, curr_sql)
+        new_tab_s = rtm.get_redis_tab_size(new_tab)
 
-        #if new_tab_s != 0:
-        #    if not init:
-        #        rtm.exchange_table_name(new_tab, redis_tab_name)
-        #        rtm.delete_redis_tab(new_tab)
+        if new_tab_s != 0:
+            if initialized:
+                rtm.exchange_table_name(new_tab, redis_tab_name)
+                rtm.delete_redis_tab(new_tab)
+            else:
+                initialized = True
 
+
+        # there maybe a time drift, from obvervation 0.13s / hour
         time.sleep(jump_gap)
         index = curr_clock_timestamp()
         #index += jump_gap
@@ -366,7 +373,7 @@ def test_RedisTable():
     rtm.exchange_table_name(tab_name, tab_name_2)
 
 def setup_log():
-    LOG_FILE = 'cache_updator.log'
+    LOG_FILE = 'logs/cache_updator.log'
     handler = logging.handlers.RotatingFileHandler(LOG_FILE, maxBytes = 1024*1024*1024, backupCount=3)
     fmt = '%(asctime)s - %(filename)s:%(lineno)s - %(name)s - %(message)s'
     formatter = logging.Formatter(fmt)
