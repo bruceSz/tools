@@ -5,7 +5,7 @@
 # Date: 2017/01/9
 #
 
-CONFIG_NAME="./config.json"
+CONFIG_NAME="./conf/config.json"
 REDIS_MASTER_BIN=""
 
 START_TIME = None
