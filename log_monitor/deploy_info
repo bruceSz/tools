@@ -1,0 +1,3 @@
+ log_monitor:
+     bin: log_monitor, log_monitor.sh 
+     pos: deploy at 172.22.86.20:/export/ldb/servers/impala-snapshot/bin

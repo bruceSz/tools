@@ -1,75 +1,10 @@
 {
 	"sqls" : [
         {
-            "sql" : "SELECT request_hour, site_code, staff_no, count(1) pv, count(DISTINCT browser_uniq_id) uv FROM (SELECT CAST(from_unixtime(floor(request_ts / 1000), 'yyyyMMddHH') AS BIGINT) request_hour, CAST(regexp_extract(utm_source, '(2-\\\\d+)-([[:digit:]]+)-([[:digit:]]+)', 2) AS INT) site_code, CAST(regexp_extract(utm_source, '(2-\\\\d+)-([[:digit:]]+)-([[:digit:]]+)', 3) AS INT) staff_no, browser_uniq_id FROM jingo_recommendation.table_template_0 WHERE extend_1 = 425 AND regexp_extract(utm_source, '(2-\\\\d+)-.*', 1) IN ('2-6897', '2-6895', '2-6893', '2-6891', '2-6892', '2-6890', '2-6896', '2-7118', '2-7141', '2-7104', '2-7149', '2-7103', '2-7107', '2-7108', '2-7513', '2-7708') AND chan_type = 3 UNION ALL SELECT CAST(from_unixtime(floor(request_ts / 1000), 'yyyyMMddHH') AS BIGINT) request_hour, CAST(regexp_extract(utm_campaign, 't_1000070694_(2-\\\\d+)-([[:digit:]]+)-([[:digit:]]+)', 2) AS INT) site_code, CAST(regexp_extract(utm_campaign, 't_1000070694_(2-\\\\d+)-([[:digit:]]+)-([[:digit:]]+)', 3) AS INT) staff_no, browser_uniq_id FROM jingo_recommendation.table_template_0 WHERE regexp_extract(utm_campaign, 't_1000070694_(2-\\\\d+)-.*', 1) IN ('2-6897', '2-6895', '2-6893', '2-6891', '2-6892', '2-6890', '2-6896', '2-7118', '2-7141', '2-7104', '2-7149', '2-7103', '2-7107', '2-7108', '2-7513', '2-7708') AND chan_type = 3) xx GROUP BY request_hour, site_code, staff_no",
-            "redis_structure" : "request_hour BIGINT,site_code INT,staff_no INT,pv BIGINT,uv BIGINT",
-            "period" : 86400,
-            "start" : "2017-01-09 00:00:00",
-            "table_names" : [ "table_template_0" ], 
-            "table" : [
-                {
-                    "type" : 0,
-                    "period" : 86400,
-                    "start" : "gdm_log_w_20170109"
-                }
-            ]
-        }, 
-        {
-            "sql" : "SELECT CAST(from_unixtime(unix_timestamp(so1.createdate), 'yyyyMMddHH') AS BIGINT) request_hour, CAST(regexp_extract(so1.jdv, '([^\\\\|]*\\\\|)*(2-\\\\d+)-([[:digit:]]+)-([[:digit:]]+)([^\\\\|]*)\\\\|.*', 3) AS INT) site_code, CAST(regexp_extract(so1.jdv, '([^\\\\|]*\\\\|)*(2-\\\\d+)-([[:digit:]]+)-([[:digit:]]+)([^\\\\|]*)\\\\|.*', 4) AS INT) staff_no, count(DISTINCT so1.order_id) total_parent_orders FROM jingo_recommendation.submit_orders so1 INNER JOIN jingo_recommendation.cp_orders cp1 ON so1.order_id = cp1.id WHERE so1.createdate >= 'time_template_0' AND so1.createdate < 'time_template_1' AND so1.chan_fourth_id = 425 AND regexp_extract(so1.jdv, '([^\\\\|]*\\\\|)*(2-\\\\d+)([^\\\\|]*)\\\\|.*', 2) IN ('2-6897', '2-6895', '2-6893', '2-6891', '2-6892', '2-6890', '2-6896', '2-7118', '2-7141', '2-7104', '2-7149', '2-7103', '2-7107', '2-7108', '2-7513', '2-7708') AND (substr(so1.sendpay, 16, 1) = '8' OR substr(so1.sendpay, 60, 3) = '002') AND cp1.parentid IS NULL GROUP BY request_hour, site_code, staff_no",
-            "redis_structure" : "request_hour BIGINT,site_code INT,staff_no INT,total_parent_orders BIGINT",
-            "period" : 86400,
-            "start" : "2017-01-09 00:00:00",
-            "timestamp_names" : [ "time_template_0", "time_template_1" ], 
-            "timestamp" : [
-                {
-                    "type" : 0,
-                    "period" : 86400,
-                    "start" : "2017-01-09 00:00:00"
-                }, 
-                {
-                    "type" : 0,
-                    "period" : 3600,
-                    "start" : "2017-01-09 00:00:00"
-                }
-            ]
-        }, 
-        {
-            "sql" : "SELECT CAST(from_unixtime(unix_timestamp(so1.createdate), 'yyyyMMddHH') AS BIGINT) request_hour, CAST(regexp_extract(so1.jdv, '([^\\\\|]*\\\\|)*(2-\\\\d+)-([[:digit:]]+)-([[:digit:]]+)([^\\\\|]*)\\\\|.*', 3) AS INT) site_code, CAST(regexp_extract(so1.jdv, '([^\\\\|]*\\\\|)*(2-\\\\d+)-([[:digit:]]+)-([[:digit:]]+)([^\\\\|]*)\\\\|.*', 4) AS INT) staff_no, count(DISTINCT so1.order_id) total_parent_orders FROM jingo_recommendation.submit_orders so1 INNER JOIN jingo_recommendation.cp_orders cp1 ON so1.order_id = cp1.id WHERE so1.createdate >= 'time_template_0' AND so1.createdate < 'time_template_1' AND so1.chan_fourth_id = 425 AND regexp_extract(so1.jdv, '([^\\\\|]*\\\\|)*(2-\\\\d+)([^\\\\|]*)\\\\|.*', 2) IN ('2-6897', '2-6895', '2-6893', '2-6891', '2-6892', '2-6890', '2-6896', '2-7118', '2-7141', '2-7104', '2-7149', '2-7103', '2-7107', '2-7108', '2-7513', '2-7708') AND (substr(so1.sendpay, 16, 1) = '8' OR substr(so1.sendpay, 60, 3) = '002') AND cp1.parentid IS NULL AND cp1.paysuredate IS NOT NULL GROUP BY request_hour, site_code, staff_no",
-            "redis_structure" : "request_hour BIGINT,site_code INT,staff_no INT,total_parent_orders BIGINT",
-            "period" : 86400,
-            "start" : "2017-01-09 00:00:00",
-            "timestamp_names" : [ "time_template_0", "time_template_1" ], 
-            "timestamp" : [
-                {
-                    "type" : 0,
-                    "period" : 86400,
-                    "start" : "2017-01-09 00:00:00"
-                }, 
-                {
-                    "type" : 0,
-                    "period" : 3600,
-                    "start" : "2017-01-09 00:00:00"
-                }
-            ]
-        }, 
-        {
-            "sql" : "SELECT CAST(from_unixtime(unix_timestamp(so1.createdate), 'yyyyMMddHH') AS BIGINT) request_hour, CAST(regexp_extract(so1.jdv, '([^\\\\|]*\\\\|)*(2-\\\\d+)-([[:digit:]]+)-([[:digit:]]+)([^\\\\|]*)\\\\|.*', 3) AS INT) site_code, CAST(regexp_extract(so1.jdv, '([^\\\\|]*\\\\|)*(2-\\\\d+)-([[:digit:]]+)-([[:digit:]]+)([^\\\\|]*)\\\\|.*', 4) AS INT) staff_no, count(DISTINCT so1.order_id) total_parent_orders FROM jingo_recommendation.submit_orders so1 INNER JOIN jingo_recommendation.cp_orders cp1 ON so1.order_id = cp1.id WHERE so1.createdate >= 'time_template_0' AND so1.createdate < 'time_template_1' AND so1.chan_fourth_id = 425 AND regexp_extract(so1.jdv, '([^\\\\|]*\\\\|)*(2-\\\\d+)([^\\\\|]*)\\\\|.*', 2) IN ('2-6897', '2-6895', '2-6893', '2-6891', '2-6892', '2-6890', '2-6896', '2-7118', '2-7141', '2-7104', '2-7149', '2-7103', '2-7107', '2-7108', '2-7513', '2-7708') AND (substr(so1.sendpay, 16, 1) = '8' OR substr(so1.sendpay, 60, 3) = '002') AND cp1.parentid IS NULL AND cp1.paysuredate IS NOT NULL GROUP BY request_hour, site_code, staff_no",
-            "redis_structure" : "request_hour BIGINT,site_code INT,staff_no INT,total_parent_orders BIGINT",
-            "period" : 86400,
-            "start" : "2017-01-09 00:00:00",
-            "timestamp_names" : [ "time_template_0", "time_template_1" ], 
-            "timestamp" : [
-                {
-                    "type" : 0,
-                    "period" : 86400,
-                    "start" : "2017-01-09 00:00:00"
-                }, 
-                {
-                    "type" : 0,
-                    "period" : 3600,
-                    "start" : "2017-01-09 00:00:00"
-                }
-            ]
+            "sql" : "SELECT p.* FROM jingo_recommendation.userpin_community_mapping_final2 p LEFT OUTER JOIN (SELECT pin, count(1) c FROM jingo_recommendation.userpin_community_mapping_final2 GROUP BY pin HAVING (c > 1)) m ON p.pin = m.pin WHERE m.pin IS NULL",
+            "redis_structure" : "pin STRING,province_id INT,city_id INT,county_id INT,town_id INT,community_id BIGINT",
+            "period" : 3600,
+            "start" : "2017-01-09 00:00:00"
         }
 	], 
 	"timestamp_type_meta" : {
