@@ -5,12 +5,6 @@
             "redis_structure" : "pin STRING,province_id INT,city_id INT,county_id INT,town_id INT,community_id BIGINT",
             "period" : 3600,
             "start" : "2017-01-09 00:00:00"
-        },
-        {
-            "sql" : "SELECT pin, count(1) c FROM jingo_recommendation.userpin_community_mapping_final2 GROUP BY pin HAVING (c > 1)",
-            "redis_structure" : "pin STRING,c BIGINT",
-            "period" : 86400,
-            "start" : "2017-01-09 00:00:00"
         }
 	], 
 	"timestamp_type_meta" : {
