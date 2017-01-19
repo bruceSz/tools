@@ -18,6 +18,17 @@ REDIS_TABLE="redis_table_name"
 REDIS_TABLE_COLS="redis_table_cols"
 REDIS_TABLE_MD5_STR="redis_md5_str"
 
+
+#
+# "timestamp_type_meta" : {
+#        '0' : '2017-01-04 00:00:00', 
+#        '1' : '1483426800', 
+#        '2' : '201701031522', 
+#        '3' : '1483428118257' 
+#    }
+#
+#
+
 is_exit = False
 
 import logging
@@ -202,7 +213,7 @@ def table_generator(table_meta):
 
 
 
-def time_generator(time_meta):
+def timestr_generator(time_meta):
     start_time = time_meta["start"]
     interval = time_meta["period"]
 
@@ -255,11 +266,26 @@ def run_in_background(logger, sql_info, type_meta):
         for index in range(len(timestamp_names)):
             meta = timestamp_metas[index]
             meta_d = {}
-            meta_d["interval"] = meta["period"]
+            #meta_d["interval"] = meta["period"]
             meta_d["template_name"] = timestamp_names[index]
-            meta_d["actual_parameter"] = time_generator(meta)
+            #meta_d["actual_parameter"] = timestr_generator(meta)
+            
+            #meta_d["init_val"] = meta["start"]
+
+            if meta["type"] == "3" or meta["type"] == "1":
+                # meta["unit"] = "millisecond"
+                # or
+                # meta["unit"] = "second"
+                meta_d["actual_parameter"] = timestamp_generator(meta)
+            elif meta["type"] == "0":
+                meta_d["actual_parameter"] = timestr_generator(meta)
+            else:
+                print "Not support time type " + timestamp_names[index]
+                assert(False)
+
             meta_d["actual_parameter"].next()
-            meta_d["init_val"] = meta["start"]
+            #meta_d["offset"] = meta["offset"]
+
             #if timestr_to_timestamp(meta_d["init_val"]) < min_time:
             #    min_time = timestr_to_timestamp(meta_d["init_val"])
             n_conds.append(meta_d)
@@ -374,11 +400,11 @@ def main():
             
         print "Come here when all thread end, should not came here  normally"
 
-def test_time_generator():
+def test_timestr_generator():
     meta1 = {}
     meta1["start"] = "2017-01-09 00:00:00"
     meta1["period"] = 3600
-    g1 = time_generator(meta1)
+    g1 = timestr_generator(meta1)
     g1.next()
     idx = 0
     while True:
@@ -400,7 +426,7 @@ def test_tab_generator():
     
 
 def test_generator():
-    test_time_generator()
+    test_timestr_generator()
     test_tab_generator()
 
 def test_RedisTable():
